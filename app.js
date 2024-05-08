@@ -4,6 +4,18 @@ const CsvReadableStream = require('csv-reader');
 const OUTPUT_FILE = './ndjson.txt';
 const INPUT_FILE = './in.csv';
 const IGNORE_KEYS = ['_id', '_index', '_score'];
+const KEY_FORMATTERS = {
+  '@timestamp': (value) => {
+    const date = new Date(Date.parse(value));
+    return date.toISOString();
+  },
+  'destination.bytes': (value) => {
+    return parseInt(value.replaceAll(',', ''), 10);
+  },
+  'source.bytes': (value) => {
+    return parseInt(value.replaceAll(',', ''), 10);
+  }
+}
 
 const inputStream = Fs.createReadStream(INPUT_FILE, 'utf8');
 let headers;
@@ -18,8 +30,10 @@ inputStream
       const document = {};
       row.forEach((value, index) => {
         const key = headers[index];
-        if (!IGNORE_KEYS.includes(key)) {
-          document[key] = value;
+        if (!IGNORE_KEYS.includes(key) && value !== '-') {
+          document[key] = KEY_FORMATTERS[key]
+            ? KEY_FORMATTERS[key](value)
+            : value;
         }
       });
       documents.push(document);
